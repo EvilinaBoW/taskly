@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Taskly</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700&family=Cormorant+Garamond:ital,wght@0,500;0,700;1,500&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --goth-red: #7f1d1d;
+            --goth-gold: #a8936d;
+            --bg-paper: #fcfaf7;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: radial-gradient(circle at top right, #fff5f5, #fcfaf7, #f3f4f6);
+            background-attachment: fixed;
+            overflow: hidden;
+        }
+
+        .heading-font { font-family: 'Cormorant Garamond', serif; }
+        .logo-font { font-family: 'Cinzel Decorative', serif; }
+
+        body::before {
+            content: "";
+            position: fixed;
+            inset: 0;
+            z-index: 9999;
+            pointer-events: none;
+            opacity: 0.03;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+        }
+
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--goth-red); }
+
+        .task-card, .about-card {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+        }
+        .task-card:hover {
+            transform: scale(1.01) translateY(-5px);
+            background: white;
+            border-color: var(--goth-red);
+            box-shadow: 0 20px 40px -15px rgba(127, 29, 29, 0.1);
+        }
+
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .stagger-item { animation: fadeInUp 0.6s ease forwards; }
+
+        .btn-goth {
+            background: linear-gradient(135deg, #1a1a1a 0%, #333 100%);
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s;
+        }
+        .btn-goth::after {
+            content: '';
+            position: absolute;
+            top: 0; left: -100%; width: 100%; height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+            transition: 0.5s;
+        }
+        .btn-goth:hover::after { left: 100%; }
+        .btn-goth:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0,0,0,0.2); }
+
+        .sidebar-active {
+            color: var(--goth-red) !important;
+            border-right: 3px solid var(--goth-red);
+            background: linear-gradient(to right, transparent, rgba(127, 29, 29, 0.05));
+        }
+
+        .prio-high { border-left: 4px solid #9f1239; }
+        .prio-medium { border-left: 4px solid #b45309; }
+        .prio-low { border-left: 4px solid #15803d; }
+    </style>
+</head>
+<body class="text-stone-800">
+
+    <div class="flex h-screen overflow-hidden">
+        <aside class="w-80 bg-white/60 backdrop-blur-xl border-r border-stone-200 flex flex-col z-10">
+            <div class="p-10">
+                <div class="flex items-center gap-4 group cursor-default">
+                    <div class="w-12 h-12 bg-stone-900 rounded-full flex items-center justify-center transition-transform group-hover:rotate-12">
+                        <i class="fa-solid fa-feather-pointed text-white text-2xl"></i>
+                    </div>
+                    <h1 class="logo-font text-3xl tracking-widest text-stone-900">TASKLY</h1>
+                </div>
+            </div>
+
+            <nav class="flex-1 px-4 space-y-2">
+                <button onclick="switchTab(0)" class="nav-link sidebar-active w-full flex items-center gap-4 px-6 py-4 rounded-xl text-stone-500 hover:text-stone-900 transition-all font-medium">
+                    <i class="fa-solid fa-ghost"></i>
+                    <span>Все задачи</span>
+                </button>
+                <button onclick="switchTab(1)" class="nav-link w-full flex items-center gap-4 px-6 py-4 rounded-xl text-stone-500 hover:text-stone-900 transition-all font-medium">
+                    <i class="fa-solid fa-moon"></i>
+                    <span>В тенях</span>
+                </button>
+                <button onclick="switchTab(2)" class="nav-link w-full flex items-center gap-4 px-6 py-4 rounded-xl text-stone-500 hover:text-stone-900 transition-all font-medium">
+                    <i class="fa-solid fa-cross"></i>
+                    <span>Покоятся</span>
+                </button>
+                <button onclick="switchTab(3)" class="nav-link w-full flex items-center gap-4 px-6 py-4 rounded-xl text-stone-500 hover:text-stone-900 transition-all font-medium">
+                    <i class="fa-solid fa-ink-well"></i>
+                    <span>Манифест</span>
+                </button>
+            </nav>
+
+            <div class="p-8 mt-auto">
+                <div class="bg-stone-900 rounded-3xl p-6 text-white shadow-2xl relative overflow-hidden">
+                    <div class="relative z-10">
+                        <div class="text-xs uppercase tracking-widest opacity-60 mb-2">Дух прогресса</div>
+                        <div class="text-3xl heading-font mb-4" id="progress-text">0%</div>
+                        <div class="h-1 bg-white/20 rounded-full overflow-hidden">
+                            <div id="progress-bar" class="h-full bg-red-800 transition-all duration-1000 w-0"></div>
+                        </div>
+                    </div>
+                    <i class="fa-solid fa-bolt absolute -right-4 -bottom-4 text-white/5 text-8xl"></i>
+                </div>
+            </div>
+        </aside>
+
+        <main class="flex-1 flex flex-col relative">
+            <header class="h-24 flex items-center justify-between px-12 border-b border-stone-200 bg-white/30 backdrop-blur-md">
+                <div>
+                    <h2 id="page-title" class="heading-font text-4xl text-stone-900">Все задачи</h2>
+                    <p class="text-stone-400 text-sm italic mt-1" id="current-date"></p>
+                </div>
+                
+                <button id="add-task-btn" onclick="openAddModal()" class="btn-goth text-white px-8 py-3.5 rounded-full flex items-center gap-3">
+                    <i class="fa-solid fa-plus text-xs"></i>
+                    <span class="font-medium tracking-wide">Призвать задачу</span>
+                </button>
+            </header>
+
+            <div class="flex-1 overflow-y-auto p-12 custom-scrollbar">
+                <div id="stats-container" class="grid grid-cols-3 gap-8 mb-16">
+                    <div class="bg-white/50 p-8 rounded-[2rem] border border-stone-200/50">
+                        <div class="text-stone-400 text-xs uppercase tracking-widest mb-2 font-semibold">Всего</div>
+                        <div class="text-5xl heading-font text-stone-900" id="stat-total">0</div>
+                    </div>
+                    <div class="bg-white/50 p-8 rounded-[2rem] border border-stone-200/50">
+                        <div class="text-red-900/40 text-xs uppercase tracking-widest mb-2 font-semibold">В работе</div>
+                        <div class="text-5xl heading-font text-red-950" id="stat-active">0</div>
+                    </div>
+                    <div class="bg-white/50 p-8 rounded-[2rem] border border-stone-200/50">
+                        <div class="text-stone-400 text-xs uppercase tracking-widest mb-2 font-semibold">Завершено</div>
+                        <div class="text-5xl heading-font text-stone-400" id="stat-done">0</div>
+                    </div>
+                </div>
+
+                <div id="task-list" class="space-y-6"></div>
+
+                <div id="about-section" class="hidden max-w-3xl space-y-12 stagger-item">
+                    <section>
+                        <h3 class="heading-font text-3xl text-stone-900 mb-6 underline decoration-red-900/20 underline-offset-8">Сущность Taskly</h3>
+                        <p class="text-stone-600 leading-relaxed text-lg italic">
+                            Это локальный трекер задач, созданный для тех, чье внимание тонет в бесконечном цифровом шуме. 
+                            В отличие от перегруженных систем, Taskly фокусируется на эстетике покоя и безупречной приоритизации.
+                        </p>
+                    </section>
+
+                    <div class="grid grid-cols-2 gap-8">
+                        <div class="about-card p-8 rounded-[2.5rem] border-l-4 border-stone-900">
+                            <h4 class="heading-font text-xl mb-3">Приватность</h4>
+                            <p class="text-sm text-stone-500">Ваши обеты принадлежат только вам. Все данные хранятся локально, не покидая пределов вашего браузера.</p>
+                        </div>
+                        <div class="about-card p-8 rounded-[2.5rem] border-l-4 border-red-900">
+                            <h4 class="heading-font text-xl mb-3">Порядок</h4>
+                            <p class="text-sm text-stone-500">Инструмент для индивидуальных предпринимателей и творцов, ценящих тишину и структурность бытия.</p>
+                        </div>
+                    </div>
+
+                    <section class="opacity-60">
+                        <p class="text-xs uppercase tracking-[0.3em] font-bold text-stone-400">Версия 1.0 — Вне времени</p>
+                    </section>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <div id="modal" class="fixed inset-0 bg-stone-950/40 backdrop-blur-sm hidden z-50 items-center justify-center p-4">
+        <div class="bg-[#fcfaf7] w-full max-w-xl rounded-[2.5rem] shadow-2xl border border-stone-200 overflow-hidden transform transition-all">
+            <div class="p-10">
+                <div class="flex justify-between items-center mb-10">
+                    <h3 id="modal-title" class="heading-font text-4xl text-stone-900">Новый обет</h3>
+                    <button onclick="closeModal()" class="text-stone-400 hover:text-stone-900 text-2xl">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+
+                <form id="task-form" onsubmit="handleFormSubmit(event)" class="space-y-6">
+                    <div class="group">
+                        <label class="block text-xs uppercase tracking-widest text-stone-400 mb-2 ml-4">Суть</label>
+                        <input id="title" type="text" required placeholder="О чем вы грезите?"
+                               class="w-full bg-white border border-stone-200 rounded-2xl px-6 py-4 outline-none focus:border-red-900 transition-all shadow-sm">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs uppercase tracking-widest text-stone-400 mb-2 ml-4">Детали</label>
+                        <textarea id="description" rows="3" placeholder="..."
+                                  class="w-full bg-white border border-stone-200 rounded-2xl px-6 py-4 outline-none focus:border-red-900 transition-all shadow-sm resize-none"></textarea>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-6">
+                        <div>
+                            <label class="block text-xs uppercase tracking-widest text-stone-400 mb-2 ml-4">Важность</label>
+                            <select id="priority" class="w-full bg-white border border-stone-200 rounded-2xl px-6 py-4 outline-none focus:border-red-900">
+                                <option value="low">Тлен (Низкая)</option>
+                                <option value="medium" selected>Бытие (Средняя)</option>
+                                <option value="high">Рок (Высокая)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs uppercase tracking-widest text-stone-400 mb-2 ml-4">Срок</label>
+                            <input id="dueDate" type="date" class="w-full bg-white border border-stone-200 rounded-2xl px-6 py-4 outline-none focus:border-red-900">
+                        </div>
+                    </div>
+
+                    <div class="flex gap-4 pt-6">
+                        <button type="button" onclick="closeModal()" class="flex-1 py-4 text-stone-500 font-medium hover:text-stone-900 transition-all">Отступить</button>
+                        <button type="submit" class="flex-1 btn-goth text-white py-4 rounded-2xl font-semibold shadow-xl">Запечатлеть</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let tasks = JSON.parse(localStorage.getItem('taskly_pro')) || [];
+        let currentFilter = 'all';
+        let editingTaskId = null;
+
+        function save() {
+            localStorage.setItem('taskly_pro', JSON.stringify(tasks));
+            updateStats();
+        }
+
+        function renderTasks() {
+            const container = document.getElementById('task-list');
+            const about = document.getElementById('about-section');
+            const stats = document.getElementById('stats-container');
+            const addBtn = document.getElementById('add-task-btn');
+            
+            if (currentFilter === 'about') {
+                container.innerHTML = '';
+                about.classList.remove('hidden');
+                stats.classList.add('hidden');
+                addBtn.style.opacity = '0';
+                addBtn.style.pointerEvents = 'none';
+                return;
+            }
+
+            about.classList.add('hidden');
+            stats.classList.remove('hidden');
+            addBtn.style.opacity = '1';
+            addBtn.style.pointerEvents = 'auto';
+            container.innerHTML = '';
+
+            const filtered = tasks.filter(t => {
+                if (currentFilter === 'active') return !t.completed;
+                if (currentFilter === 'completed') return t.completed;
+                return true;
+            });
+
+            if (filtered.length === 0) {
+                container.innerHTML = `
+                    <div class="flex flex-col items-center justify-center py-20 opacity-20">
+                        <i class="fa-solid fa-scroll text-9xl mb-6"></i>
+                        <p class="text-2xl heading-font italic">Тишина в чертогах...</p>
+                    </div>`;
+                return;
+            }
+
+            filtered.forEach((task, index) => {
+                const isOverdue = task.dueDate && new Date(task.dueDate) < new Date().setHours(0,0,0,0) && !task.completed;
+                const div = document.createElement('div');
+                div.className = `task-card stagger-item p-8 rounded-[2.5rem] flex items-center gap-8 prio-${task.priority}`;
+                div.style.animationDelay = `${index * 0.05}s`;
+                
+                div.innerHTML = `
+                    <div class="relative group">
+                        <input type="checkbox" ${task.completed ? 'checked' : ''} 
+                               onchange="toggleTask(${task.id})"
+                               class="w-8 h-8 rounded-full border-2 border-stone-300 appearance-none checked:bg-red-900 checked:border-red-900 transition-all cursor-pointer">
+                        <i class="fa-solid fa-check absolute inset-0 m-auto text-white text-xs pointer-events-none opacity-0 group-has-[:checked]:opacity-100 flex items-center justify-center"></i>
+                    </div>
+
+                    <div class="flex-1">
+                        <h4 class="text-xl font-semibold ${task.completed ? 'line-through text-stone-400' : 'text-stone-900'} heading-font tracking-wide">
+                            ${task.title}
+                        </h4>
+                        ${task.description ? `<p class="text-stone-500 mt-2 text-sm leading-relaxed">${task.description}</p>` : ''}
+                        
+                        <div class="flex items-center gap-6 mt-4">
+                            <span class="text-[10px] uppercase tracking-[0.2em] font-bold ${task.priority === 'high' ? 'text-red-700' : 'text-stone-400'}">
+                                ${task.priority}
+                            </span>
+                            ${task.dueDate ? `
+                                <span class="flex items-center gap-2 text-xs text-stone-400">
+                                    <i class="fa-regular fa-calendar"></i>
+                                    ${new Date(task.dueDate).toLocaleDateString('ru-RU')}
+                                </span>
+                            ` : ''}
+                            ${isOverdue ? `<span class="text-red-900 text-[10px] font-bold uppercase animate-pulse">☠ Срок истек</span>` : ''}
+                        </div>
+                    </div>
+
+                    <div class="flex gap-2">
+                        <button onclick="editTask(${task.id})" class="p-3 text-stone-300 hover:text-stone-900 transition-colors">
+                            <i class="fa-solid fa-pen-nib"></i>
+                        </button>
+                        <button onclick="deleteTask(${task.id})" class="p-3 text-stone-300 hover:text-red-900 transition-colors">
+                            <i class="fa-solid fa-trash-can"></i>
+                        </button>
+                    </div>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        function updateStats() {
+            const total = tasks.length;
+            const done = tasks.filter(t => t.completed).length;
+            const percent = total ? Math.round((done / total) * 100) : 0;
+
+            document.getElementById('stat-total').innerText = total;
+            document.getElementById('stat-active').innerText = total - done;
+            document.getElementById('stat-done').innerText = done;
+            document.getElementById('progress-text').innerText = percent + '%';
+            document.getElementById('progress-bar').style.width = percent + '%';
+        }
+
+        function toggleTask(id) {
+            const task = tasks.find(t => t.id === id);
+            task.completed = !task.completed;
+            save();
+            renderTasks();
+        }
+
+        function deleteTask(id) {
+            tasks = tasks.filter(t => t.id !== id);
+            save();
+            renderTasks();
+        }
+
+        function openAddModal() {
+            editingTaskId = null;
+            document.getElementById('modal-title').innerText = 'Новый обет';
+            document.getElementById('task-form').reset();
+            document.getElementById('modal').style.display = 'flex';
+        }
+
+        function editTask(id) {
+            const task = tasks.find(t => t.id === id);
+            editingTaskId = id;
+            document.getElementById('modal-title').innerText = 'Правка обета';
+            document.getElementById('title').value = task.title;
+            document.getElementById('description').value = task.description;
+            document.getElementById('priority').value = task.priority;
+            document.getElementById('dueDate').value = task.dueDate;
+            document.getElementById('modal').style.display = 'flex';
+        }
+
+        function closeModal() {
+            document.getElementById('modal').style.display = 'none';
+        }
+
+        function handleFormSubmit(e) {
+            e.preventDefault();
+            const data = {
+                title: document.getElementById('title').value,
+                description: document.getElementById('description').value,
+                priority: document.getElementById('priority').value,
+                dueDate: document.getElementById('dueDate').value,
+            };
+
+            if (editingTaskId) {
+                const idx = tasks.findIndex(t => t.id === editingTaskId);
+                tasks[idx] = { ...tasks[idx], ...data };
+            } else {
+                tasks.push({ ...data, id: Date.now(), completed: false });
+            }
+
+            save();
+            closeModal();
+            renderTasks();
+        }
+
+        function switchTab(idx) {
+            const links = document.querySelectorAll('.nav-link');
+            links.forEach(l => l.classList.remove('sidebar-active'));
+            links[idx].classList.add('sidebar-active');
+
+            const titles = ['Все задачи', 'В тенях', 'Покоятся', 'Манифест'];
+            const filters = ['all', 'active', 'completed', 'about'];
+            
+            document.getElementById('page-title').innerText = titles[idx];
+            currentFilter = filters[idx];
+            renderTasks();
+        }
+
+        window.onload = () => {
+            document.getElementById('current-date').innerText = new Date().toLocaleDateString('ru-RU', { 
+                weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' 
+            });
+            renderTasks();
+            updateStats();
+        };
+    </script>
+</body>
+</html>
